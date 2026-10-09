@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AimBot</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d0f;--bg2:#141417;--bg3:#1a1a1e;--bg4:#222227;
+  --border:#2a2a30;--border2:#38383f;
+  --text:#e8e8ec;--muted:#6b6b75;--faint:#3a3a42;
+  --accent:#7c6dfa;--accent2:#5a4fd6;
+  --ok:#3ecf8e;--warn:#f59e0b;--err:#ef4444;--info:#38bdf8;
+  --red:#ef4444;--green:#3ecf8e;
+}
+body{background:var(--bg);color:var(--text);font-family:'SF Pro Display',system-ui,sans-serif;font-size:13px;line-height:1.5;min-height:100vh;padding:0}
+.shell{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-size:11px;font-weight:600;letter-spacing:3px;color:var(--accent);text-transform:uppercase}
+.spacer{flex:1}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.ok{background:var(--ok)}
+.dot.err{background:var(--err)}
+.stat-chip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.stat-val{color:var(--text);font-weight:500;min-width:28px;text-align:right}
+.body{display:grid;grid-template-columns:200px 1fr;overflow:hidden;height:calc(100vh - 88px)}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg4);color:var(--text);border-left:2px solid var(--accent);padding-left:8px}
+.nav-icon{width:14px;opacity:.5;font-size:14px}
+.nav-item.active .nav-icon{opacity:1}
+.nav-sep{height:1px;background:var(--border);margin:8px 0}
+.nav-label{font-size:10px;color:var(--faint);padding:6px 10px 2px;text-transform:uppercase;letter-spacing:1.5px}
+.main{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.hero{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;align-items:center;gap:16px}
+.hero-btn{width:64px;height:64px;border-radius:12px;border:1.5px solid var(--faint);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:22px}
+.hero-btn:hover{border-color:var(--accent);background:var(--bg4)}
+.hero-btn.on{border-color:var(--ok);background:rgba(62,207,142,.08)}
+.hero-info{flex:1}
+.hero-status{font-size:22px;font-weight:600;letter-spacing:.5px}
+.hero-status.on{color:var(--ok)}
+.hero-status.off{color:var(--muted)}
+.hero-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.kill-badge{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--err);font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:1px}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.sec-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-title{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.sec-body{padding:16px}
+.row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.row + .row{border-top:1px solid var(--border)}
+.row-label{font-size:12px;color:var(--muted);flex:0 0 100px}
+.row-val{font-size:12px;color:var(--accent);min-width:36px;text-align:right;font-weight:500}
+.row-control{flex:1;display:flex;align-items:center;gap:8px}
+input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:var(--faint);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 0 2px rgba(124,109,250,.3)}
+input[type=range]::-webkit-slider-thumb:hover{background:var(--accent2)}
+.sw{width:36px;height:20px;border-radius:10px;background:var(--faint);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;border:none}
+.sw.on{background:var(--accent)}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:white;transition:left .2s}
+.sw.on::after{left:19px}
+.zones{display:flex;gap:6px;flex:1}
+.zone-btn{flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;cursor:pointer;text-align:center;transition:all .15s;font-weight:500;letter-spacing:.5px}
+.zone-btn:hover{border-color:var(--border2);color:var(--text)}
+.zone-btn.active{border-color:var(--accent);background:rgba(124,109,250,.1);color:var(--accent)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.swatch{width:24px;height:24px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.swatch:hover{transform:scale(1.15)}
+.swatch.active{border-color:white;transform:scale(1.15)}
+select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:5px 8px;cursor:pointer;outline:none;flex:1}
+select:focus{border-color:var(--accent)}
+input[type=text]{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:5px 8px;outline:none;width:100%;flex:1}
+input[type=text]:focus{border-color:var(--accent)}
+.bottombar{background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px}
+.btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.btn:hover{background:var(--bg4);border-color:var(--border2)}
+.btn:active{transform:scale(.98)}
+.btn-accent{background:var(--accent);border-color:var(--accent2);color:white}
+.btn-accent:hover{background:var(--accent2)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.pane{display:none}
+.pane.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:12px;color:var(--text);opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;z-index:99}
+.toast.show{opacity:1;transform:translateY(0)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="topbar">
+  <span class="logo">AimBot</span>
+  <div class="spacer"></div>
+  <div class="stat-chip"><div class="dot" id="dArduino"></div><span>Arduino</span></div>
+  <div class="stat-chip"><span>FPS</span><span class="stat-val" id="sFps">—</span></div>
+  <div class="stat-chip"><span>T</span><span class="stat-val" id="sTargets">—</span></div>
+  <div class="stat-chip"><span>Lock</span><span class="stat-val" id="sLock">—</span></div>
+</div>
+<div class="body">
+<div class="sidebar">
+  <div class="nav-label">Main</div>
+  <button class="nav-item active" onclick="show('aim')"><span class="nav-icon">◎</span> Aim</button>
+  <button class="nav-item" onclick="show('detection')"><span class="nav-icon">⊡</span> Detection</button>
+  <button class="nav-item" onclick="show('keys')"><span class="nav-icon">⌘</span> Keys</button>
+  <div class="nav-sep"></div>
+  <div class="nav-label">Extra</div>
+  <button class="nav-item" onclick="show('rcs')"><span class="nav-icon">↓</span> RCS</button>
+  <button class="nav-item" onclick="show('display')"><span class="nav-icon">□</span> Display</button>
+  <button class="nav-item" onclick="show('color')"><span class="nav-icon">◈</span> Color</button>
+  <div class="nav-sep"></div>
+  <div class="nav-label">System</div>
+  <button class="nav-item" onclick="show('profile')"><span class="nav-icon">◧</span> Profile</button>
+</div>
+<div class="main">
+<div class="hero">
+  <button class="hero-btn" id="heroBtn" onclick="doToggle()">⊙</button>
+  <div class="hero-info">
+    <div class="hero-status off" id="heroStatus">OFFLINE</div>
+    <div class="hero-sub" id="heroSub">กด เพื่อ เปิดใช้งาน</div>
+  </div>
+  <span class="kill-badge">END = kill</span>
+</div>
+<div class="pane active" id="pane-aim">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Aim Zone</span></div>
+    <div class="sec-body">
+      <div class="zones">
+        <button class="zone-btn active" id="z-head" onclick="setZone('head')">HEAD</button>
+        <button class="zone-btn" id="z-neck" onclick="setZone('neck')">NECK</button>
+        <button class="zone-btn" id="z-body" onclick="setZone('body')">BODY</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Movement</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Smoothing</span>
+        <div class="row-control"><input type="range" id="rSmooth" min="1" max="20" step="0.5" value="8" oninput="sv('vSmooth',this.value,1)"></div>
+        <span class="row-val" id="vSmooth">8.0</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Speed X</span>
+        <div class="row-control"><input type="range" id="rSpdX" min="0.05" max="2" step="0.05" value="0.55" oninput="sv('vSpdX',this.value,2)"></div>
+        <span class="row-val" id="vSpdX">0.55</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Speed Y</span>
+        <div class="row-control"><input type="range" id="rSpdY" min="0.05" max="2" step="0.05" value="0.60" oninput="sv('vSpdY',this.value,2)"></div>
+        <span class="row-val" id="vSpdY">0.60</span>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Humanize</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Enable</span>
+        <div class="row-control"><button class="sw on" id="swHuman" onclick="tog(this)"></button></div>
+      </div>
+      <div class="row">
+        <span class="row-label">Strength</span>
+        <div class="row-control"><input type="range" id="rHumStr" min="0.1" max="2" step="0.1" value="0.6" oninput="sv('vHumStr',this.value,1)"></div>
+        <span class="row-val" id="vHumStr">0.6</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-detection">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Capture Zone</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">FOV</span>
+        <div class="row-control"><input type="range" id="rFov" min="60" max="500" step="10" value="220" oninput="sv('vFov',this.value,0,'px')"></div>
+        <span class="row-val" id="vFov">220px</span>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Contour Filter</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Min Area</span>
+        <div class="row-control"><input type="range" id="rMinA" min="1" max="500" step="1" value="8" oninput="sv('vMinA',this.value,0)"></div>
+        <span class="row-val" id="vMinA">8</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Max Area</span>
+        <div class="row-control"><input type="range" id="rMaxA" min="1000" max="50000" step="500" value="18000" oninput="sv('vMaxA',this.value,0)"></div>
+        <span class="row-val" id="vMaxA">18000</span>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Offset</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Offset X</span>
+        <div class="row-control"><input type="range" id="rOffX" min="-100" max="100" step="1" value="0" oninput="sv('vOffX',this.value,0,'px')"></div>
+        <span class="row-val" id="vOffX">0px</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Offset Y</span>
+        <div class="row-control"><input type="range" id="rOffY" min="-100" max="100" step="1" value="0" oninput="sv('vOffY',this.value,0,'px')"></div>
+        <span class="row-val" id="vOffY">0px</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-keys">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Bindings</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Aim Key</span>
+        <div class="row-control">
+          <select id="selAim">
+            <option value="always">Always On</option>
+            <option value="alt" selected>Alt</option>
+            <option value="shift">Shift</option>
+            <option value="ctrl">Ctrl</option>
+            <option value="capslock">CapsLock</option>
+            <option value="tab">Tab</option>
+            <option value="mouse1">Mouse 1</option>
+            <option value="mouse2">Mouse 2</option>
+            <option value="mouse4">Mouse 4</option>
+            <option value="mouse5">Mouse 5</option>
+            <option value="f">F</option>
+            <option value="g">G</option>
+            <option value="z">Z</option>
+            <option value="x">X</option>
+            <option value="c">C</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Trigger Key</span>
+        <div class="row-control">
+          <select id="selTrig">
+            <option value="mouse1" selected>Mouse 1</option>
+            <option value="mouse2">Mouse 2</option>
+            <option value="mouse4">Mouse 4</option>
+            <option value="mouse5">Mouse 5</option>
+            <option value="f">F</option>
+            <option value="g">G</option>
+            <option value="z">Z</option>
+            <option value="x">X</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Trig Delay</span>
+        <div class="row-control"><input type="range" id="rTrigMs" min="0" max="500" step="10" value="50" oninput="sv('vTrigMs',this.value,0,'ms')"></div>
+        <span class="row-val" id="vTrigMs">50ms</span>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Arduino</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">COM Port</span>
+        <div class="row-control">
+          <input type="text" id="inCom" value="COM3" style="max-width:100px">
+          <button class="btn btn-sm" onclick="doReconnect()">Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-rcs">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Recoil Control</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Enable RCS</span>
+        <div class="row-control"><button class="sw" id="swRcs" onclick="tog(this)"></button></div>
+      </div>
+      <div class="row">
+        <span class="row-label">Strength</span>
+        <div class="row-control"><input type="range" id="rRcsStr" min="0" max="20" step="0.5" value="3" oninput="sv('vRcsStr',this.value,1)"></div>
+        <span class="row-val" id="vRcsStr">3.0</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-display">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Vision Window</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Show Monitor</span>
+        <div class="row-control">
+          <button class="sw on" id="swMon" onclick="doToggleMon()"></button>
+          <span style="font-size:11px;color:var(--muted)" id="lblMon">ON</span>
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Show FOV</span>
+        <div class="row-control">
+          <button class="sw on" id="swFov" onclick="doToggleFov()"></button>
+          <span style="font-size:11px;color:var(--muted)" id="lblFov">ON</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-color">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Enemy Color</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Preset</span>
+        <div class="row-control">
+          <div class="swatches">
+            <div class="swatch active" style="background:#9900ff" onclick="setColor('9900ff',this)" title="Purple"></div>
+            <div class="swatch" style="background:#ff00ff" onclick="setColor('ff00ff',this)" title="Magenta"></div>
+            <div class="swatch" style="background:#ffff00" onclick="setColor('ffff00',this)" title="Yellow"></div>
+            <div class="swatch" style="background:#00ffff" onclick="setColor('00ffff',this)" title="Cyan"></div>
+            <div class="swatch" style="background:#ff0000" onclick="setColor('ff0000',this)" title="Red"></div>
+            <div class="swatch" style="background:#ffaa00" onclick="setColor('ffaa00',this)" title="Orange"></div>
+            <div class="swatch" style="background:#00ff00" onclick="setColor('00ff00',this)" title="Green"></div>
+            <div class="swatch" style="background:#0088ff" onclick="setColor('0088ff',this)" title="Blue"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <span class="row-label" style="color:var(--muted);font-size:11px">Right-click Vision Window เพื่อ pick จากหน้าจอ</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-profile">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Active Profile</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Profile</span>
+        <div class="row-control">
+          <select id="selProfile" onchange="doSwitchProfile(this.value)"></select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Save Profile</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Name</span>
+        <div class="row-control">
+          <input type="text" id="inProfileName" placeholder="เช่น cs2, valorant" style="max-width:130px">
+          <button class="btn btn-sm" onclick="doSaveProfile()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+<div class="bottombar">
+  <span style="font-size:11px;color:var(--muted)" id="lblSaved"></span>
+  <div class="spacer"></div>
+  <button class="btn" onclick="doSave()">Save</button>
+  <button class="btn btn-accent" id="btnStart" onclick="doToggle()">Start</button>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Clear old token from localStorage on page load
+localStorage.removeItem('api_token')
+let API_TOKEN = ''
+
+async function getToken(){
+  if(!API_TOKEN){
+    API_TOKEN = prompt('ใส่ API Token:') || ''
+    if(API_TOKEN){
+      localStorage.setItem('api_token', API_TOKEN)
+      console.log('[AUTH] Token saved to localStorage')
+    }
+  }
+  console.log('[AUTH] Token ready:', API_TOKEN?.substring(0, 8) + '...')
+}
+
+async function api(url, method='GET', body=null){
+  // Ensure token is available before making request
+  if(!API_TOKEN){
+    await getToken()
+  }
+  
+  console.log('[API]', method, url, 'TOKEN:', API_TOKEN?.substring(0,8) + '...')
+  
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Token': API_TOKEN
+    }
+  }
+  if(body) opts.body = JSON.stringify(body)
+  const r = await fetch(url, opts)
+  if(!r.ok){
+    let msg = `HTTP ${r.status}`
+    try {
+      const err = await r.json()
+      msg = err.error || err.message || msg
+    } catch(e) {}
+    throw new Error(msg)
+  }
+  return r.json()
+}
+
+let _tid = null
+function toast(msg, ok=true){
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.style.borderColor = ok ? 'rgba(62,207,142,.3)' : 'rgba(239,68,68,.3)'
+  t.classList.add('show')
+  clearTimeout(_tid)
+  _tid = setTimeout(()=>t.classList.remove('show'), 2200)
+}
+
+function sv(id, val, dec=1, suf=''){
+  document.getElementById(id).textContent = parseFloat(val).toFixed(dec) + suf
+}
+
+function gf(id, def){ return parseFloat(document.getElementById(id)?.value ?? def) || def }
+function gi(id, def){ return parseInt(document.getElementById(id)?.value ?? def) || def }
+function gv(id, def){ return document.getElementById(id)?.value ?? def }
+function gb(id){ return document.getElementById(id)?.classList.contains('on') }
+
+function show(name){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'))
+  event.currentTarget.classList.add('active')
+  document.getElementById('pane-'+name)?.classList.add('active')
+}
+
+const _togMap = {
+  'swHuman': 'humanize',
+  'swRcs':   'rcs_enable',
+}
+
+function tog(el){
+  el.classList.toggle('on')
+  const key = _togMap[el.id]
+  if(key){
+    api('/update', 'POST', {[key]: el.classList.contains('on')}).catch(()=>{ el.classList.toggle('on'); toast('Update failed', false) })
+  }
+}
+
+let botOn = false
+function syncBot(){
+  const btn = document.getElementById('heroBtn')
+  const st  = document.getElementById('heroStatus')
+  const sub = document.getElementById('heroSub')
+  const sb  = document.getElementById('btnStart')
+  btn.classList.toggle('on', botOn)
+  st.textContent = botOn ? 'ONLINE' : 'OFFLINE'
+  st.className = 'hero-status ' + (botOn ? 'on' : 'off')
+  sub.textContent = botOn ? 'กำลัง aim อยู่...' : 'กด เพื่อ เปิดใช้งาน'
+  sb.textContent = botOn ? 'Stop' : 'Start'
+  sb.className = 'btn ' + (botOn ? '' : 'btn-accent')
+}
+
+function doToggle(){
+  api('/toggle', 'POST').then(d=>{
+    botOn=d.active
+    syncBot()
+    toast(botOn?'🟢 Online':'🔴 Offline')
+  }).catch(err=>{
+    toast(`Toggle failed: ${err.message}`, false)
+  })
+}
+
+function setZone(z){
+  document.querySelectorAll('.zone-btn').forEach(b=>b.classList.remove('active'))
+  document.getElementById('z-'+z)?.classList.add('active')
+  api('/zone', 'POST', {zone:z}).then(d=>{
+    toast(`Zone: ${z.toUpperCase()}`)
+  }).catch(err=>{
+    toast(`Zone failed: ${err.message}`, false)
+    poll()
+  })
+}
+
+let selColor = '9900ff'
+function setColor(hex, el){
+  selColor = hex
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'))
+  el.classList.add('active')
+  api('/update', 'POST', {color:hex}).then(()=>toast('Color updated')).catch(err=>toast(`Color failed: ${err.message}`, false))
+}
+
+function doToggleMon(){
+  api('/toggle_monitor', 'POST').then(d=>{
+    const on = d.show_monitor
+    document.getElementById('swMon').classList.toggle('on', on)
+    document.getElementById('lblMon').textContent = on?'ON':'OFF'
+    toast('Monitor ' + (on?'ON':'OFF'))
+  }).catch(err=>{
+    toast(`Monitor failed: ${err.message}`, false)
+  })
+}
+
+function doToggleFov(){
+  api('/toggle_fov', 'POST').then(d=>{
+    const on = d.show_fov
+    document.getElementById('swFov').classList.toggle('on', on)
+    document.getElementById('lblFov').textContent = on?'ON':'OFF'
+    toast('FOV ' + (on?'ON':'OFF'))
+  }).catch(err=>{
+    toast(`FOV failed: ${err.message}`, false)
+  })
+}
+
+function doReconnect(){
+  toast('Connecting...')
+  api('/reconnect', 'POST').then(d=>toast(d.ok?'Arduino connected':'Failed',d.ok)).catch(()=>toast('Error',false))
+}
+
+function doSave(){
+  const data = {
+    smooth:   gf('rSmooth', 8),
+    spd_x:    gf('rSpdX',  0.55),
+    spd_y:    gf('rSpdY',  0.60),
+    hum_str:  gf('rHumStr', 0.6),
+    humanize: gb('swHuman'),
+    fov:      gi('rFov',  220),
+    min_area: gi('rMinA',   8),
+    max_area: gi('rMaxA', 18000),
+    off_x:    gi('rOffX',   0),
+    off_y:    gi('rOffY',   0),
+    trig_ms:  gi('rTrigMs', 50),
+    rcs_on:   gb('swRcs'),
+    rcs_str:  gf('rRcsStr', 3),
+    aim_key:  gv('selAim', 'alt'),
+    trig_key: gv('selTrig','mouse1'),
+    com:      gv('inCom',  'COM3'),
+    color:    selColor,
+  }
+  api('/update', 'POST', data).then(d=>{
+    if(d.ok){
+      toast('Saved')
+      document.getElementById('lblSaved').textContent = 'Saved ' + new Date().toLocaleTimeString()
+    } else {
+      toast(d.message||'Save failed', false)
+    }
+  }).catch(()=>toast('Server unreachable',false))
+}
+
+function setSlider(id, valId, val, dec=1, suf=''){
+  const el = document.getElementById(id)
+  if(el) el.value = val
+  sv(valId, val, dec, suf)
+}
+
+function setSw(id, on){
+  const el = document.getElementById(id)
+  if(el) el.classList.toggle('on', !!on)
+}
+
+function setSelect(id, val){
+  const el = document.getElementById(id)
+  if(el && val !== undefined) el.value = val
+}
+
+function doSwitchProfile(name){
+  if(!name) return
+  api('/profile/switch', 'POST', {name}).then(d=>{
+    if(d.ok) toast('Profile: ' + name)
+    else toast(d.message||'Switch failed', false)
+  }).catch(()=>toast('Switch failed', false))
+}
+
+function doSaveProfile(){
+  const name = document.getElementById('inProfileName')?.value?.trim()
+  if(!name){ toast('ใส่ชื่อ profile ก่อน', false); return }
+  api('/profile/save', 'POST', {name}).then(d=>{
+    if(d.ok){ toast('Saved: ' + name); poll() }
+    else toast(d.message||'Save failed', false)
+  }).catch(()=>toast('Save failed', false))
+}
+
+let _firstPoll = true
+function poll(){
+  api('/status', 'GET').then(d=>{
+    document.getElementById('dArduino').className = 'dot ' + (d.arduino==='ok'?'ok':'err')
+    document.getElementById('sFps').textContent     = d.fps ?? '—'
+    document.getElementById('sTargets').textContent = d.targets ?? '—'
+    document.getElementById('sLock').textContent    = d.locked ? '●' : '○'
+    document.getElementById('sLock').style.color    = d.locked ? 'var(--ok)' : 'var(--muted)'
+    if(botOn !== d.active){ botOn = d.active; syncBot() }
+    setSw('swMon', d.show_win !== false)
+    document.getElementById('lblMon').textContent = d.show_win !== false ? 'ON':'OFF'
+    setSw('swFov', d.show_fov !== false)
+    document.getElementById('lblFov').textContent = d.show_fov !== false ? 'ON':'OFF'
+    if(d.aim_zone){
+      document.querySelectorAll('.zone-btn').forEach(b=>b.classList.remove('active'))
+      document.getElementById('z-'+d.aim_zone)?.classList.add('active')
+    }
+    if(_firstPoll && d){
+      _firstPoll = false
+      if(d.smooth   !== undefined) setSlider('rSmooth', 'vSmooth', d.smooth,   1)
+      if(d.x_speed  !== undefined) setSlider('rSpdX',   'vSpdX',   d.x_speed,  2)
+      if(d.y_speed  !== undefined) setSlider('rSpdY',   'vSpdY',   d.y_speed,  2)
+      setSw('swHuman', d.humanize !== false)
+      if(d.human_str !== undefined) setSlider('rHumStr', 'vHumStr', d.human_str, 1)
+      if(d.fov      !== undefined) setSlider('rFov',  'vFov',  d.fov,      0, 'px')
+      if(d.min_area !== undefined) setSlider('rMinA', 'vMinA', d.min_area, 0)
+      if(d.max_area !== undefined) setSlider('rMaxA', 'vMaxA', d.max_area, 0)
+      if(d.offset_x !== undefined) setSlider('rOffX', 'vOffX', d.offset_x, 0, 'px')
+      if(d.offset_y !== undefined) setSlider('rOffY', 'vOffY', d.offset_y, 0, 'px')
+      setSelect('selAim',  d.activation_key)
+      setSelect('selTrig', d.trigger_key)
+      if(d.trigger_delay !== undefined) setSlider('rTrigMs', 'vTrigMs', d.trigger_delay, 0, 'ms')
+      if(d.com !== undefined) {const el = document.getElementById('inCom'); if(el) el.value = d.com}
+      setSw('swRcs', d.rcs_enable)
+      if(d.rcs_strength !== undefined) setSlider('rRcsStr', 'vRcsStr', d.rcs_strength, 1)
+    }
+    if(d.profiles && d.profile){
+      const sel = document.getElementById('selProfile')
+      if(sel){
+        const cur = Array.from(sel.options).map(o=>o.value).join(',')
+        const nxt = d.profiles.join(',')
+        if(cur !== nxt){
+          sel.innerHTML = d.profiles.map(p=>`<option value="${p}">${p}</option>`).join('')
+        }
+        sel.value = d.profile
+      }
+    }
+  }).catch(()=>{
+    ['sFps','sTargets','sLock'].forEach(id=>{document.getElementById(id).textContent = '—'})
+    document.getElementById('dArduino').className = 'dot err'
+  }).finally(()=>{
+    setTimeout(poll, 1000)
+  })
+}
+
+getToken().then(() => {
+  console.log('[INIT] Token loaded, starting poll...')
+  poll()
+})
+</script>
+</body>
+</html>
