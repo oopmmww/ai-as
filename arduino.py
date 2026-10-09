@@ -1,6 +1,7 @@
 import serial, serial.tools.list_ports
 import time, threading, queue
 from config import config
+import data_logger as logger
 
 arduino         = None
 _q              = queue.Queue(maxsize=8)
@@ -42,10 +43,29 @@ def connect_arduino():
                 timeout=0.1, write_timeout=0.1)
             time.sleep(1.8)
             print("[ARDUINO] OK @ {}".format(config.SERIAL_PORT))
+            
+            # ✨ LOG: บันทึกการเชื่อต่อสำเร็จ
+            logger.log_event(
+                event_type='arduino_connected',
+                severity='info',
+                message=f'Arduino connected on {config.SERIAL_PORT} @ {config.SERIAL_BAUD} baud',
+                data={'port': config.SERIAL_PORT, 'baud': config.SERIAL_BAUD}
+            )
+            
             return True
         except serial.SerialException as e:
             print("[ARDUINO] Connect failed: {}".format(e))
-            arduino = None; return False
+            arduino = None
+            
+            # ✨ LOG: บันทึกการเชื่อต่อล้มเหลว
+            logger.log_event(
+                event_type='arduino_connection_error',
+                severity='error',
+                message=f'Failed to connect to {config.SERIAL_PORT}: {str(e)}',
+                data={'port': config.SERIAL_PORT, 'error': str(e)}
+            )
+            
+            return False
 
 # ─── Write ──────────────────────────────────────────────
 def _write(dx: int, dy: int) -> bool:
@@ -59,6 +79,15 @@ def _write(dx: int, dy: int) -> bool:
         with _reconnect_lock:
             if not _reconnect_scheduled:
                 _reconnect_scheduled = True
+                
+                # ✨ LOG: บันทึก serial error
+                logger.log_event(
+                    event_type='arduino_serial_error',
+                    severity='warning',
+                    message='Serial write error, attempting reconnect',
+                    data={'port': config.SERIAL_PORT}
+                )
+                
                 threading.Thread(
                     target=_schedule_reconnect,
                     daemon=True,
@@ -66,7 +95,14 @@ def _write(dx: int, dy: int) -> bool:
                 ).start()
         return False
     except Exception as e:
-        print("[ERROR] Write: {}".format(e)); return False
+        print("[ERROR] Write: {}".format(e))
+        logger.log_event(
+            event_type='arduino_write_error',
+            severity='error',
+            message=f'Arduino write error: {str(e)}',
+            data={'error': str(e)}
+        )
+        return False
 
 def _schedule_reconnect():
     global _reconnect_scheduled

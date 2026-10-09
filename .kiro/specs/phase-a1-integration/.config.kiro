@@ -1,0 +1,8 @@
+{
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "featureName": "phase-a1-integration",
+  "description": "Phase A1: Integrate logging system and dashboard with main.py and vision.py",
+  "createdAt": "2026-10-09",
+  "status": "in-progress"
+}

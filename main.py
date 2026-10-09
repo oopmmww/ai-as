@@ -3,6 +3,9 @@ import arduino as ard
 from vision import vision_loop
 from routes import app
 import keyboard
+from data_logger import initialize_logger, get_logger
+from logger_routes import register_logger_routes
+from dashboard_route import register_dashboard_route
 
 _shutdown_event = threading.Event()
 _cleanup_done   = False          # guard ป้องกัน double-cleanup (atexit + kill_listener)
@@ -83,6 +86,22 @@ def _cleanup():
             print("  [OK] Serial port closed")
     except Exception as e:
         print(f"  [WARN] Error closing serial: {e}")
+    
+    # Save logger data
+    try:
+        logger = get_logger()
+        if logger:
+            logger.stop_and_save()
+            print("  [OK] Logger data saved (JSON)")
+            
+            # Export CSV for analysis
+            if logger.export_csv():
+                print("  [OK] Logger data exported (CSV)")
+            else:
+                print("  [WARN] CSV export failed")
+    except Exception as e:
+        print(f"  [WARN] Error saving logger: {e}")
+    
     print("[OK] Shutdown complete")
 
 def _kill_listener():
@@ -92,8 +111,8 @@ def _kill_listener():
 
 def _open_browser():
     time.sleep(1.5)
-    webbrowser.open("http://127.0.0.1:5000")
-    print("[BROWSER] Opened at http://127.0.0.1:5000")
+    webbrowser.open("http://127.0.0.1:5000/dashboard")
+    print("[BROWSER] Opened at http://127.0.0.1:5000/dashboard")
 
 if __name__ == "__main__":
     _hide_console()
@@ -121,6 +140,15 @@ if __name__ == "__main__":
     # Kill key listener (NOT daemon, so it keeps program alive)
     threading.Thread(target=_kill_listener, daemon=False, name="KillListener").start()
 
+    # Logger initialization
+    initialize_logger(log_dir="logs")
+    
+    # Register logger routes
+    register_logger_routes(app)
+    
+    # Register dashboard route
+    register_dashboard_route(app)
+    
     # Flask (main thread)
     try:
         app.run(host="127.0.0.1", port=5000, debug=False, threaded=True)

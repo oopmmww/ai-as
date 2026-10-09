@@ -19,6 +19,7 @@ from collections import deque
 from config import config
 from arduino import send_to_arduino
 from humanize import humanize_movement
+import data_logger as logger
 # pyautogui ถูกลบออก — ใช้ Arduino HID อย่างเดียว (ป้องกัน 2x movement)
 # หากต้องการ fallback ให้ uncomment และตรวจสอบให้ไม่ใช้พร้อมกัน
 
@@ -63,6 +64,7 @@ last_frame_time = 0.0
 target_count    = 0
 AIM_ZONE        = "head"
 AIM_ZONE_MAP    = {"head": 0.18, "neck": 0.28, "body": 0.50}
+_frame_number   = 0  # ← เพิ่มสำหรับ logging
 
 # Window toggles (guarded by _vision_lock)
 _show_monitor    = True
@@ -512,7 +514,7 @@ def get_vision_snapshot():
     """Returns atomic snapshot of vision state for /status endpoint."""
     with _vision_lock:
         return {
-            "lock_bbox": _lock_bbox.copy() if _lock_bbox else None,
+            "lock_bbox": tuple(_lock_bbox) if _lock_bbox else None,
             "lock_vx": float(_lock_vx),
             "lock_vy": float(_lock_vy),
             "lock_lost": int(_lock_lost),
@@ -643,6 +645,7 @@ def pick_color(event, x, y, flags, param):
 def vision_loop():
     global _active, target_count, last_frame_time, fps_history
     global _lock_bbox, _lock_lost, _lock_vx, _lock_vy, _consecutive_errors, _lock_prev_area
+    global _frame_number
 
     cap_tag = "[DX]" if _USE_DXCAM else "[MS]"
     print("[VISION] Started [{}]".format(cap_tag))
@@ -652,6 +655,8 @@ def vision_loop():
     _window_created = False
 
     while True:
+        _frame_number += 1  # ← เพิ่ม frame counter
+        
         try:
             # ── Atomic config snapshot — ONE lock acquisition per frame ──
             cfg = config.get_detection_params()
@@ -702,6 +707,15 @@ def vision_loop():
                 elif cfg.get('outlier_logging', True):
                     x, y, w, h = cv2.boundingRect(cnt)
                     print(f"[OUTLIER] {reason}: bbox=({x},{y},{w},{h})")
+                    
+                    # ✨ LOG: บันทึก rejected detection
+                    logger.log_detection(
+                        frame_number=_frame_number,
+                        bbox=(x, y, w, h),
+                        confidence=0.0,
+                        detection_type='rejected',
+                        outlier_reasons=[reason]
+                    )
             
             target_count = len(filtered_contours)
 
@@ -783,6 +797,15 @@ def vision_loop():
                         # ✨ FEATURE 2: Update outlier state with valid detection
                         _outlier_state.add_detection(best_bbox)
 
+                    # ✨ LOG: บันทึกการตรวจจับที่สำเร็จ
+                    logger.log_detection(
+                        frame_number=_frame_number,
+                        bbox=best_bbox,
+                        confidence=best_confidence,
+                        detection_type='valid',
+                        outlier_reasons=None
+                    )
+
                     # ── 2-zone smooth (ใช้ snapshot SMOOTH) ────
                     dist = ((pred_x-fov_center[0])**2+(pred_y-fov_center[1])**2)**0.5
                     s    = max(1.0, cfg['smooth'])
@@ -824,6 +847,18 @@ def vision_loop():
                     if check_trigger_fire():
                         if _cur_show_monitor:
                             cv2.circle(vis, fov_center, 20, (0,0,255), 3)
+                        
+                        # ✨ LOG: บันทึกการกดยิง
+                        logger.log_event(
+                            event_type='trigger_fire',
+                            severity='info',
+                            message=f'Trigger fired at target confidence={best_confidence:.0%}',
+                            data={
+                                'bbox': best_bbox,
+                                'confidence': best_confidence,
+                                'frame_number': _frame_number
+                            }
+                        )
                     
                     # ✨ FEATURE 1: Draw confidence meter ✨
                     if _cur_show_monitor:
@@ -840,6 +875,14 @@ def vision_loop():
                         _lock_vx = _lock_vy = 0.0
                         # ✨ FEATURE 2: Clear outlier state when target lost
                         _outlier_state.clear()
+                        
+                        # ✨ LOG: บันทึกการหลุดเป้าหมาย
+                        logger.log_event(
+                            event_type='target_lost',
+                            severity='warning',
+                            message=f'Target lost after {_LOST_MAX} frames',
+                            data={'frame_number': _frame_number}
+                        )
 
             # ── Trigger dot ──────────────────────────────
             if _cur_show_monitor:
@@ -850,6 +893,13 @@ def vision_loop():
             dt = time.perf_counter() - t0
             if dt > 0: fps_history.append(1.0/dt)
             fps = int(sum(fps_history)/len(fps_history)) if fps_history else 0
+
+            # ✨ LOG: บันทึก FPS และ latency ทุกเฟรม (sample ทุก 5 เฟรม เพื่อลด I/O)
+            if _frame_number % 5 == 0:
+                logger.log_frame(
+                    fps=1.0/dt if dt > 0 else 0,
+                    latency_ms=dt * 1000
+                )
 
             # ── HUD ──────────────────────────────────────
             if _cur_show_monitor:
