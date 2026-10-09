@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from flask import Flask, jsonify, send_from_directory, request
-from config import config
-import arduino as ard
-import vision
+from src.config import config
+from src.core import arduino as ard
+from src.core import vision
 import secrets
 import functools
 import os

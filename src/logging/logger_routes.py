@@ -13,7 +13,7 @@ POST /api/logger/save           - บันทึกข้อมูลทำน�
 """
 
 from flask import Blueprint, jsonify, request, send_file
-import data_logger as logger
+from . import data_logger as logger
 import io
 import csv
 

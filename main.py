@@ -1,13 +1,12 @@
 import threading, webbrowser, time, sys, ctypes, atexit
 import gc
-import arduino as ard
-from vision import vision_loop
-from routes import app
 import keyboard
-from data_logger import initialize_logger, get_logger
-from logger_routes import register_logger_routes
-from dashboard_route import register_dashboard_route
-from rcs_learner import initialize_rcs_learner, get_rcs_learner
+
+# Core modules
+from src.core import arduino as ard, vision_loop
+from src.config import config, initialize_rcs_learner, get_rcs_learner
+from src.logging import initialize_logger, get_logger, register_logger_routes
+from src.web import app, register_dashboard_route
 
 _shutdown_event = threading.Event()
 _cleanup_done   = False          # guard ป้องกัน double-cleanup (atexit + kill_listener)
