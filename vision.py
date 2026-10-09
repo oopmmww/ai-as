@@ -387,10 +387,11 @@ def validate_contour(contour, prev_bbox, frame_width, frame_height, config):
     curr_bbox = (x, y, w, h)
     
     # Get config parameters with defaults
-    max_speed_pct = config.get('max_speed_pct', 0.30)
-    min_size_ratio = config.get('min_size_ratio', 0.50)
-    max_size_ratio = config.get('max_size_ratio', 2.00)
-    max_aspect_change = config.get('max_aspect_change', 0.15)
+    # Phase 1: Relaxed outlier thresholds to reduce false rejection
+    max_speed_pct = config.get('max_speed_pct', 0.50)      # 0.30 → 0.50 (Phase 1.2)
+    min_size_ratio = config.get('min_size_ratio', 0.35)    # 0.50 → 0.35 (Phase 1.3)
+    max_size_ratio = config.get('max_size_ratio', 3.00)    # 2.00 → 3.00 (Phase 1.3)
+    max_aspect_change = config.get('max_aspect_change', 0.25)  # 0.15 → 0.25 (Phase 1.1)
     
     # Check 1: Movement (early-exit on fail)
     if not validate_movement(prev_bbox, curr_bbox, frame_width, max_speed_pct):
