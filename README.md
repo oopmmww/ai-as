@@ -2,7 +2,9 @@
 
 Advanced color-based aim assist with Arduino HID output, multi-target tracking, adaptive color detection, and complete logging system.
 
-**Status:** Phase 7 ✅ | Active Development
+**Status:** Phase 8 ✅ | Project Restructured | Active Development
+
+**Latest Update:** โครงสร้างโปรเจ็กต์ปรับปรุง - src/ modules สำหรับ maintainability
 
 ---
 
@@ -30,40 +32,69 @@ Advanced color-based aim assist with Arduino HID output, multi-target tracking, 
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Structure (Phase 8 - Reorganized)
 
 ```
 aias/
 ├── main.py                      ← Entry point (run this)
-├── vision.py                    ← Vision loop, detection, multi-target tracking
-├── arduino.py                   ← Serial HID communication
-├── humanize.py                  ← Movement humanization
-├── config.py                    ← Thread-safe config + profile management
-├── routes.py                    ← Flask REST API endpoints
-├── data_logger.py               ← Logging system (detection, performance, events)
-├── logger_routes.py             ← Logger API endpoints
-├── dashboard_route.py           ← Dashboard UI routes
-├── rcs_learner.py               ← Smart RCS pattern learning
 ├── requirements.txt             ← Python dependencies
-├── CHANGELOG.md                 ← Development history (Phase 1-7)
-├── aimbot_config.json           ← Saved settings (auto-created)
-├── rcs_patterns.json            ← RCS patterns (auto-created)
-├── templates/
+├── src/                         ← Main source code (Phase 8 - NEW)
+│   ├── __init__.py
+│   ├── core/                    ← Core vision & hardware modules
+│   │   ├── __init__.py
+│   │   ├── vision.py            ← Vision loop, detection, multi-target tracking
+│   │   ├── arduino.py           ← Serial HID communication
+│   │   └── humanize.py          ← Movement humanization
+│   ├── config/                  ← Configuration & settings
+│   │   ├── __init__.py
+│   │   ├── config.py            ← Thread-safe config + profile management
+│   │   └── rcs_learner.py       ← Smart RCS pattern learning
+│   ├── logging/                 ← Data logging system
+│   │   ├── __init__.py
+│   │   ├── data_logger.py       ← Logging (detection, performance, events)
+│   │   └── logger_routes.py     ← Logger API endpoints
+│   └── web/                     ← Flask web interface
+│       ├── __init__.py
+│       ├── routes.py            ← REST API endpoints
+│       └── dashboard_route.py   ← Dashboard UI routes
+├── templates/                   ← HTML templates
 │   ├── index.html               ← Main control panel
 │   ├── dashboard.html           ← Analytics dashboard
 │   └── settings.html            ← Settings page (standalone)
+├── docs/                        ← Documentation (Phase 8 - NEW)
+│   ├── CHANGELOG.md             ← Development history (Phase 1-8)
+│   ├── DASHBOARD_SETUP.md       ← Dashboard guide
+│   ├── DEVELOPMENT_ROADMAP.md   ← Future plans
+│   ├── INTEGRATION_SUMMARY.md   ← System architecture
+│   ├── LOGGER_INTEGRATION.md    ← Logging details
+│   └── PLAN_A_DETAILED.md       ← Detailed plans
+├── config/                      ← Configuration files (Phase 8 - NEW)
+│   └── aimbot_config.json       ← Saved settings (auto-created)
+├── firmware/
+│   └── firmware.ino             ← Arduino sketch
 ├── logs/                        ← Session logs (auto-created)
 │   ├── session_*.json           ← Session data
 │   ├── detections_*.csv         ← Detection logs
 │   └── performance_*.csv        ← Performance metrics
-├── firmware/
-│   └── firmware.ino             ← Arduino sketch
-└── .kiro/
-    └── specs/phase-a1-integration/
-        ├── requirements.md      ← Integration requirements
-        ├── design.md            ← Technical design
-        └── tasks.md             ← Task checklist
+├── .github/
+│   ├── workflows/lint.yml       ← GitHub Actions
+│   └── ISSUE_TEMPLATE/          ← Issue templates
+├── .kiro/
+│   └── specs/phase-a1-integration/
+│       ├── requirements.md      ← Integration requirements
+│       ├── design.md            ← Technical design
+│       └── tasks.md             ← Task checklist
+├── CONTRIBUTING.md              ← Contributor guide
+├── LICENSE                      ← MIT License
+└── README.md                    ← This file
 ```
+
+**Key Changes (Phase 8):**
+- ✅ Modularized `src/` package structure
+- ✅ Moved docs to `docs/` folder
+- ✅ Moved configs to `config/` folder
+- ✅ Cleaner imports: `from src.core import vision_loop`
+- ✅ Better separation of concerns (core, config, logging, web)
 
 ---
 
@@ -164,7 +195,7 @@ Auto-save on shutdown: `logs/session_YYYYMMDD_HHMMSS.json` + CSV exports
 
 ## 📝 Development Phases
 
-See **[CHANGELOG.md](CHANGELOG.md)** for detailed history:
+See **[docs/CHANGELOG.md](docs/CHANGELOG.md)** for detailed history:
 
 - **Phase 1:** Arduino COM port connection fix
 - **Phase 2:** Dashboard + analytics UI
@@ -172,7 +203,8 @@ See **[CHANGELOG.md](CHANGELOG.md)** for detailed history:
 - **Phase 4:** Advanced features (multi-target, adaptive color, smart RCS)
 - **Phase 5:** Performance tuning (GC optimization, spike detection)
 - **Phase 6:** Outlier threshold relaxation
-- **Phase 7:** Settings panel + logging control ← **Current**
+- **Phase 7:** Settings panel + logging control
+- **Phase 8:** Project restructuring - src/ modules for maintainability ← **Current**
 
 ---
 
