@@ -1,4 +1,5 @@
 import threading, webbrowser, time, sys, ctypes, atexit
+import gc
 import arduino as ard
 from vision import vision_loop
 from routes import app
@@ -114,6 +115,21 @@ def _open_browser():
     webbrowser.open("http://127.0.0.1:5000/dashboard")
     print("[BROWSER] Opened at http://127.0.0.1:5000/dashboard")
 
+def _gc_tuning_loop():
+    """Phase 3.2: GC tuning - manually trigger collection to avoid pauses in vision loop"""
+    # Disable automatic GC to prevent pauses during vision loop
+    gc.disable()
+    print("[GC] Garbage collection disabled (manual control)")
+    
+    while not _shutdown_event.is_set():
+        time.sleep(2.0)  # Trigger every 2 seconds (off-thread)
+        try:
+            collected = gc.collect()
+            if collected > 100:  # Only log if significant collection happened
+                print(f"[GC] Collected {collected} objects")
+        except Exception as e:
+            print(f"[GC] Error: {e}")
+
 if __name__ == "__main__":
     _hide_console()
     print("=" * 50)
@@ -136,6 +152,9 @@ if __name__ == "__main__":
 
     # Browser
     threading.Thread(target=_open_browser,  daemon=True, name="Browser").start()
+    
+    # Phase 3.2: GC tuning thread (avoid pauses in vision loop)
+    threading.Thread(target=_gc_tuning_loop, daemon=True, name="GCTuning").start()
 
     # Kill key listener (NOT daemon, so it keeps program alive)
     threading.Thread(target=_kill_listener, daemon=False, name="KillListener").start()

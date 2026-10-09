@@ -132,23 +132,28 @@ _lock_lost = 0
 _lock_vx   = 0.0
 _lock_vy   = 0.0
 _lock_prev_area = 0.0  # ← สำหรับ confidence scoring
+_lock_confidence = 0.0  # ← Phase 2.1: EMA smoothed confidence
 
 _LOST_MAX    = 10
 _PRED_W      = 0.35
 _VEL_EMA     = 0.30
+_CONF_EMA    = 0.25  # ← Phase 2.1: Confidence smoothing factor (lower = smoother)
 
 # Error tracking
 _consecutive_errors = 0
 _ERROR_THRESHOLD = 10
 
-def _write_lock_state(bbox=None, lost=None, vx=None, vy=None):
+def _write_lock_state(bbox=None, lost=None, vx=None, vy=None, confidence=None):
     """Atomic write to lock state"""
-    global _lock_bbox, _lock_lost, _lock_vx, _lock_vy
+    global _lock_bbox, _lock_lost, _lock_vx, _lock_vy, _lock_confidence
     with _vision_lock:
         if bbox is not None: _lock_bbox = bbox
         if lost is not None: _lock_lost = lost
         if vx is not None:   _lock_vx = vx
         if vy is not None:   _lock_vy = vy
+        if confidence is not None:
+            # Phase 2.1: EMA smoothing for confidence
+            _lock_confidence = _CONF_EMA * confidence + (1 - _CONF_EMA) * _lock_confidence
 
 
 # ═══════════════════════════════════════════════════════
@@ -519,6 +524,7 @@ def get_vision_snapshot():
             "lock_vx": float(_lock_vx),
             "lock_vy": float(_lock_vy),
             "lock_lost": int(_lock_lost),
+            "lock_confidence": round(float(_lock_confidence), 3),  # ← Phase 2.1
             "active": bool(_active),
             "show_monitor": bool(_show_monitor),
             "show_fov": bool(_show_fov),
@@ -806,6 +812,9 @@ def vision_loop():
                         detection_type='valid',
                         outlier_reasons=None
                     )
+                    
+                    # ✨ Phase 2.1: Smooth confidence via EMA
+                    _write_lock_state(confidence=best_confidence)
 
                     # ── 2-zone smooth (ใช้ snapshot SMOOTH) ────
                     dist = ((pred_x-fov_center[0])**2+(pred_y-fov_center[1])**2)**0.5
@@ -897,10 +906,41 @@ def vision_loop():
 
             # ✨ LOG: บันทึก FPS และ latency ทุกเฟรม (sample ทุก 5 เฟรม เพื่อลด I/O)
             if _frame_number % 5 == 0:
+                current_fps = 1.0/dt if dt > 0 else 0
+                current_latency_ms = dt * 1000
+                
                 logger.log_frame(
-                    fps=1.0/dt if dt > 0 else 0,
-                    latency_ms=dt * 1000
+                    fps=current_fps,
+                    latency_ms=current_latency_ms
                 )
+                
+                # ✨ Phase 3.1: Detect performance spikes
+                if current_fps < 30:  # FPS drop critical
+                    logger.log_event(
+                        event_type='fps_spike_low',
+                        severity='warning',
+                        message=f'FPS dropped to {current_fps:.1f}',
+                        data={
+                            'fps': current_fps,
+                            'latency_ms': current_latency_ms,
+                            'frame_number': _frame_number,
+                            'target_count': target_count,
+                            'memory_mb': 0  # Placeholder
+                        }
+                    )
+                
+                if current_latency_ms > 50:  # Latency spike
+                    logger.log_event(
+                        event_type='latency_spike',
+                        severity='warning',
+                        message=f'Latency spike: {current_latency_ms:.2f}ms',
+                        data={
+                            'fps': current_fps,
+                            'latency_ms': current_latency_ms,
+                            'frame_number': _frame_number,
+                            'target_count': target_count
+                        }
+                    )
 
             # ── HUD ──────────────────────────────────────
             if _cur_show_monitor:
