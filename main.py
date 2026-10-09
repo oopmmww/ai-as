@@ -7,6 +7,7 @@ import keyboard
 from data_logger import initialize_logger, get_logger
 from logger_routes import register_logger_routes
 from dashboard_route import register_dashboard_route
+from rcs_learner import initialize_rcs_learner, get_rcs_learner
 
 _shutdown_event = threading.Event()
 _cleanup_done   = False          # guard ป้องกัน double-cleanup (atexit + kill_listener)
@@ -103,6 +104,15 @@ def _cleanup():
     except Exception as e:
         print(f"  [WARN] Error saving logger: {e}")
     
+    # Phase 4.3: Save RCS patterns
+    try:
+        rcs = get_rcs_learner()
+        if rcs:
+            rcs.save_patterns()
+            print("  [OK] RCS patterns saved")
+    except Exception as e:
+        print(f"  [WARN] Error saving RCS: {e}")
+    
     print("[OK] Shutdown complete")
 
 def _kill_listener():
@@ -161,6 +171,10 @@ if __name__ == "__main__":
 
     # Logger initialization
     initialize_logger(log_dir="logs")
+    
+    # Phase 4.3: RCS Learner initialization
+    initialize_rcs_learner()
+    print("[STARTUP] RCS learner initialized")
     
     # Register logger routes
     register_logger_routes(app)

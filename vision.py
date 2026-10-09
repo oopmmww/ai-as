@@ -429,8 +429,63 @@ def _read_lock_state():
 
 
 # ═══════════════════════════════════════════════════════
-#  COLOR DETECTION
+#  ADAPTIVE COLOR DETECTION (Phase 4.2)
 # ═══════════════════════════════════════════════════════
+def calculate_frame_brightness(frame):
+    """Calculate average brightness of frame."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return np.mean(gray)
+
+
+def adapt_color_range(hsv_frame, base_lower, base_upper, brightness):
+    """
+    Adapt HSV range based on frame brightness.
+    
+    Args:
+        hsv_frame: HSV image
+        base_lower: Base lower HSV range
+        base_upper: Base upper HSV range
+        brightness: 0-255 average brightness
+    
+    Returns:
+        Adjusted (lower, upper) tuple
+    """
+    # Brightness normalize: 0 (dark) to 1 (bright)
+    brightness_factor = brightness / 255.0
+    
+    # Adjust saturation based on brightness
+    if brightness_factor < 0.3:  # Very dark
+        # Reduce S and V thresholds (accept darker colors)
+        lower = np.array([
+            base_lower[0] - 10,  # More hue tolerance
+            max(0, base_lower[1] - 50),  # Lower S threshold
+            max(0, base_lower[2] - 30)   # Lower V threshold
+        ])
+        upper = np.array([
+            base_upper[0] + 10,
+            base_upper[1],
+            base_upper[2]
+        ])
+    elif brightness_factor > 0.7:  # Very bright
+        # Reduce V tolerance (avoid washed out)
+        lower = np.array([
+            base_lower[0],
+            base_lower[1],
+            base_lower[2] + 30
+        ])
+        upper = np.array([
+            base_upper[0],
+            min(255, base_upper[1] + 30),  # Higher S tolerance
+            min(255, base_upper[2] - 20)   # Lower V max
+        ])
+    else:  # Normal lighting
+        lower, upper = base_lower, base_upper
+    
+    # Clamp values
+    lower = np.clip(lower, 0, 180)
+    upper = np.clip(upper, 0, 180)
+    
+    return lower, upper
 def detect_color(hsv: np.ndarray, lower: np.ndarray = None, upper: np.ndarray = None) -> np.ndarray:
     """Detect color in HSV frame. Uses provided bounds (thread-safe) or falls back to config."""
     if lower is None:
@@ -544,8 +599,130 @@ def reset_error_counter():
 
 
 # ═══════════════════════════════════════════════════════
-#  INPUT — full key map (vision2)
+#  MULTI-TARGET TRACKING (Phase 4.1)
 # ═══════════════════════════════════════════════════════
+class TargetTracker:
+    """Track multiple targets with velocity prediction."""
+    
+    def __init__(self, max_targets=5, max_lost_frames=10):
+        self.targets = {}  # {id: {bbox, vx, vy, confidence, lost_frames}}
+        self.next_id = 0
+        self.max_targets = max_targets
+        self.max_lost_frames = max_lost_frames
+        self._lock = threading.Lock()
+    
+    def update(self, detections):
+        """
+        Update tracker with new detections.
+        
+        Args:
+            detections: List of (x, y, w, h, confidence) tuples
+        
+        Returns:
+            List of tracked targets with IDs and predictions
+        """
+        with self._lock:
+            # Match detections to existing targets
+            matched = set()
+            updated_targets = {}
+            
+            for detection in detections:
+                x, y, w, h, conf = detection
+                best_match_id = None
+                best_distance = float('inf')
+                
+                # Find closest existing target
+                for tid, target in self.targets.items():
+                    if tid in matched:
+                        continue
+                    
+                    px = target['bbox'][0] + target['bbox'][2] // 2
+                    py = target['bbox'][1] + target['bbox'][3] // 2
+                    cx = x + w // 2
+                    cy = y + h // 2
+                    
+                    distance = ((px - cx)**2 + (py - cy)**2) ** 0.5
+                    
+                    if distance < best_distance and distance < 50:  # 50px max distance
+                        best_distance = distance
+                        best_match_id = tid
+                
+                if best_match_id is not None:
+                    # Update existing target
+                    old_target = self.targets[best_match_id]
+                    old_cx = old_target['bbox'][0] + old_target['bbox'][2] // 2
+                    old_cy = old_target['bbox'][1] + old_target['bbox'][3] // 2
+                    new_cx = x + w // 2
+                    new_cy = y + h // 2
+                    
+                    new_vx = new_cx - old_cx
+                    new_vy = new_cy - old_cy
+                    
+                    updated_targets[best_match_id] = {
+                        'bbox': (x, y, w, h),
+                        'vx': 0.3 * new_vx + 0.7 * old_target['vx'],  # EMA velocity
+                        'vy': 0.3 * new_vy + 0.7 * old_target['vy'],
+                        'confidence': conf,
+                        'lost_frames': 0,
+                        'age': old_target.get('age', 0) + 1
+                    }
+                    matched.add(best_match_id)
+                else:
+                    # New target
+                    if len(updated_targets) < self.max_targets:
+                        target_id = self.next_id
+                        self.next_id += 1
+                        updated_targets[target_id] = {
+                            'bbox': (x, y, w, h),
+                            'vx': 0.0,
+                            'vy': 0.0,
+                            'confidence': conf,
+                            'lost_frames': 0,
+                            'age': 0
+                        }
+            
+            # Mark unmatched targets as lost
+            for tid, target in self.targets.items():
+                if tid not in matched:
+                    target['lost_frames'] += 1
+                    if target['lost_frames'] <= self.max_lost_frames:
+                        updated_targets[tid] = target
+            
+            self.targets = updated_targets
+            
+            # Return tracked targets
+            return [
+                {
+                    'id': tid,
+                    'bbox': target['bbox'],
+                    'vx': target['vx'],
+                    'vy': target['vy'],
+                    'confidence': target['confidence'],
+                    'age': target.get('age', 0)
+                }
+                for tid, target in self.targets.items()
+                if target['lost_frames'] == 0
+            ]
+    
+    def get_primary_target(self):
+        """Get highest confidence target (for single-target aim)."""
+        with self._lock:
+            if not self.targets:
+                return None
+            
+            best = max(
+                self.targets.items(),
+                key=lambda x: x[1]['confidence']
+            )
+            return {
+                'id': best[0],
+                'bbox': best[1]['bbox'],
+                'confidence': best[1]['confidence']
+            }
+
+
+# Global tracker instance
+_target_tracker = TargetTracker(max_targets=5)
 _AIM_KEY_MAP = {
     "always": None,
     "alt":"alt", "shift":"shift", "ctrl":"ctrl",
@@ -682,9 +859,18 @@ def vision_loop():
 
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
+            # ── Phase 4.2: Adaptive color detection ────
+            frame_brightness = calculate_frame_brightness(frame)
+            adaptive_lower, adaptive_upper = adapt_color_range(
+                hsv, 
+                cfg['lower_color'], 
+                cfg['upper_color'], 
+                frame_brightness
+            )
+
             # ── Detection + noise reduction (vision1) ────
-            # Use snapshot colors for thread safety
-            mask = detect_color(hsv, lower=cfg['lower_color'], upper=cfg['upper_color'])
+            # Use adaptive colors for thread safety
+            mask = detect_color(hsv, lower=adaptive_lower, upper=adaptive_upper)
             mask = cv2.GaussianBlur(mask, (5, 5), 0)
             mask = cv2.erode(mask,  k3, iterations=1)
             mask = cv2.dilate(mask, k3, iterations=2)
