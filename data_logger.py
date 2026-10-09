@@ -341,6 +341,9 @@ def get_logger():
 
 def log_detection(frame_number, bbox, confidence, detection_type, outlier_reasons=None):
     """Convenience function"""
+    from config import config
+    if not config.LOGGING_ENABLED:
+        return
     if _global_session_logger:
         _global_session_logger.detection_logger.log_detection(
             frame_number, bbox, confidence, detection_type, outlier_reasons
@@ -349,12 +352,18 @@ def log_detection(frame_number, bbox, confidence, detection_type, outlier_reason
 
 def log_event(event_type, severity, message, data=None):
     """Convenience function"""
+    from config import config
+    if not config.LOGGING_ENABLED:
+        return
     if _global_session_logger:
         _global_session_logger.event_logger.log_event(event_type, severity, message, data)
 
 
 def log_frame(fps, latency_ms):
     """Convenience function"""
+    from config import config
+    if not config.LOGGING_ENABLED:
+        return
     if _global_session_logger:
         _global_session_logger.performance_logger.log_frame(fps, latency_ms)
 
@@ -362,6 +371,9 @@ def log_frame(fps, latency_ms):
 def log_environment(frame_number, brightness, contrast, fg_pixels_ratio=None, 
                     target_count=0, mog2_learning_complete=False):
     """Convenience function"""
+    from config import config
+    if not config.LOGGING_ENABLED:
+        return
     if _global_session_logger:
         _global_session_logger.environment_logger.log_sample(
             frame_number, brightness, contrast, fg_pixels_ratio, 

@@ -112,6 +112,7 @@ input[type=text]:focus{border-color:var(--accent)}
   <div class="nav-sep"></div>
   <div class="nav-label">System</div>
   <button class="nav-item" onclick="show('profile')"><span class="nav-icon">◧</span> Profile</button>
+  <button class="nav-item" onclick="show('settings')"><span class="nav-icon">⚙</span> Settings</button>
 </div>
 <div class="main">
 <div class="hero">
@@ -355,6 +356,34 @@ input[type=text]:focus{border-color:var(--accent)}
           <button class="btn btn-sm" onclick="doSaveProfile()">Save</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+<div class="pane" id="pane-settings">
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Data Logging</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <span class="row-label">Logging</span>
+        <div class="row-control"><button class="sw on" id="swLogging" onclick="doToggleLogging()"></button></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="row-label" style="color:var(--muted);font-size:11px">Enable/disable automatic data logging and performance tracking</span>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Navigation</span></div>
+    <div class="sec-body">
+      <div class="row">
+        <button class="btn btn-accent" style="flex:1" onclick="openDashboard()">📊 Open Dashboard</button>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="sec-head"><span class="sec-title">Current Config</span></div>
+    <div class="sec-body">
+      <div style="background:var(--bg3);padding:12px;border-radius:6px;font-family:monospace;font-size:11px;color:var(--accent);max-height:200px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word" id="configDisplay">Loading...</div>
     </div>
   </div>
 </div>
@@ -644,6 +673,64 @@ getToken().then(() => {
   console.log('[INIT] Token loaded, starting poll...')
   poll()
 })
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function doToggleLogging(){
+  const sw = document.getElementById('swLogging')
+  const newState = !sw.classList.contains('on')
+  
+  try {
+    const response = await api('/api/config/logging', 'POST', {enabled: newState})
+    if(response.logging_enabled){
+      sw.classList.add('on')
+      toast('✅ Logging enabled')
+    } else {
+      sw.classList.remove('on')
+      toast('❌ Logging disabled')
+    }
+    loadConfig()
+  } catch(err){
+    toast(`Error: ${err.message}`, false)
+    sw.classList.remove('on')
+  }
+}
+
+function openDashboard(){
+  window.open('/dashboard', '_blank')
+  toast('📊 Opening Dashboard...')
+}
+
+async function loadConfig(){
+  try {
+    const config = await api('/api/config', 'GET')
+    
+    // Update toggle state
+    const sw = document.getElementById('swLogging')
+    if(config.logging_enabled){
+      sw.classList.add('on')
+    } else {
+      sw.classList.remove('on')
+    }
+    
+    // Display config
+    const configDisplay = document.getElementById('configDisplay')
+    configDisplay.textContent = JSON.stringify(config, null, 2)
+  } catch(err){
+    console.error('Failed to load config:', err)
+    const configDisplay = document.getElementById('configDisplay')
+    configDisplay.textContent = `Error loading config: ${err.message}`
+  }
+}
+
+// Load config when poll() is called
+const originalPoll = poll
+function poll(){
+  originalPoll()
+  loadConfig()
+}
 </script>
 </body>
 </html>

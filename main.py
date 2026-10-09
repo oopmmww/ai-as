@@ -122,8 +122,8 @@ def _kill_listener():
 
 def _open_browser():
     time.sleep(1.5)
-    webbrowser.open("http://127.0.0.1:5000/dashboard")
-    print("[BROWSER] Opened at http://127.0.0.1:5000/dashboard")
+    webbrowser.open("http://127.0.0.1:5000/")
+    print("[BROWSER] Opened at http://127.0.0.1:5000/")
 
 def _gc_tuning_loop():
     """Phase 3.2: GC tuning - manually trigger collection to avoid pauses in vision loop"""

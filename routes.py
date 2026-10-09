@@ -282,3 +282,49 @@ def _apply_color(hex_str):
         print("[COLOR] {}".format(key))
     else:
         print("[WARN] Unknown color: {}".format(key))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SETTINGS & CONFIG ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/settings")
+def settings():
+    """Serve settings page"""
+    return send_from_directory("templates", "settings.html")
+
+@app.route("/api/config", methods=["GET"])
+@require_auth
+def get_config():
+    """Get current configuration"""
+    return jsonify({
+        "logging_enabled": config.LOGGING_ENABLED,
+        "active_profile": config.ACTIVE_PROFILE,
+        "serial_port": config.SERIAL_PORT,
+        "fov": config.FOV,
+        "x_speed": config.X_SPEED,
+        "y_speed": config.Y_SPEED,
+        "smooth": config.SMOOTH,
+        "rcs_enable": config.RCS_ENABLE,
+        "humanize": config.HUMANIZE,
+    })
+
+@app.route("/api/config/logging", methods=["POST"])
+@require_auth
+def toggle_logging():
+    """Toggle logging on/off"""
+    try:
+        data = request.get_json() or {}
+        enabled = _bool(data, "enabled")
+        if enabled is not None:
+            config.LOGGING_ENABLED = enabled
+            config.save()
+            return jsonify({
+                "success": True,
+                "logging_enabled": config.LOGGING_ENABLED
+            })
+        return jsonify({"error": "enabled field required"}), 400
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

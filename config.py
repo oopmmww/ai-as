@@ -55,7 +55,9 @@ class Config:
 
         # ── Profile ───────────────────────────────────────
         self.ACTIVE_PROFILE = "default"
-        self.load()
+        
+        # ── Logging (Phase 5) ──────────────────────────────
+        self.LOGGING_ENABLED = True  # Toggle เก็บ logs หรือไม่
 
     # ─── Thread-safe Color Properties ────────────────────────
     # np.ndarray is mutable → must do atomic reference swap
