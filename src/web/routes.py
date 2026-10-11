@@ -10,7 +10,8 @@ import os
 import math
 import re
 
-app = Flask(__name__, template_folder="templates")
+_base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+app = Flask(__name__, template_folder=os.path.join(_base_dir, "templates"))
 
 TOKEN_FILE = ".api_token"
 if os.path.exists(TOKEN_FILE):
@@ -72,7 +73,7 @@ def _bool(d, k):
 
 @app.route("/")
 def index():
-    return send_from_directory("templates", "index.html")
+    return send_from_directory(app.template_folder, "index.html")
 
 @app.route("/status")
 def status():
@@ -291,7 +292,7 @@ def _apply_color(hex_str):
 @app.route("/settings")
 def settings():
     """Serve settings page"""
-    return send_from_directory("templates", "settings.html")
+    return send_from_directory(app.template_folder, "settings.html")
 
 @app.route("/api/config", methods=["GET"])
 @require_auth
