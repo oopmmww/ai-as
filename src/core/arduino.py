@@ -1,7 +1,7 @@
 import serial, serial.tools.list_ports
 import time, threading, queue
-from config import config
-import data_logger as logger
+from src.config import config
+from src.logging import data_logger as logger
 
 arduino         = None
 _q              = queue.Queue(maxsize=8)

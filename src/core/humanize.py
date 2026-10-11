@@ -2,7 +2,7 @@ import numpy as np
 import random
 import math
 import time as time_module
-from config import config
+from src.config import config
 
 # Try to use better noise library, fallback to basic Perlin
 try:

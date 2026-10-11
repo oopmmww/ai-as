@@ -16,10 +16,10 @@ import ctypes
 import threading
 import traceback
 from collections import deque
-from config import config
-from arduino import send_to_arduino
-from humanize import humanize_movement
-import data_logger as logger
+from src.config import config
+from src.core.arduino import send_to_arduino
+from src.core.humanize import humanize_movement
+from src.logging import data_logger as logger
 # pyautogui ถูกลบออก — ใช้ Arduino HID อย่างเดียว (ป้องกัน 2x movement)
 # หากต้องการ fallback ให้ uncomment และตรวจสอบให้ไม่ใช้พร้อมกัน
 
