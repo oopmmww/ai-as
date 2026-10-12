@@ -17,6 +17,7 @@ from pathlib import Path
 from collections import deque
 import psutil
 import os
+from src.config import config
 
 
 class DetectionLogger:
@@ -90,23 +91,28 @@ class PerformanceLogger:
         self._lock = threading.Lock()
         self.process = psutil.Process(os.getpid())
     
-    def log_frame(self, fps, latency_ms):
+    def log_frame(self, fps, latency_ms, frame_number=None):
         """
         บันทึกข้อมูลต่อเฟรม
         
         Args:
             fps: frames per second
             latency_ms: เวลา vision loop (millisecond)
+            frame_number: frame number (optional, for sampling)
         """
         with self._lock:
             self.fps_history.append(fps)
             self.latency_history.append(latency_ms)
             
-            try:
-                memory_mb = self.process.memory_info().rss / (1024 * 1024)
-                self.memory_history.append(memory_mb)
-            except:
-                pass
+            # Sample memory every 30 frames to reduce psutil overhead
+            should_sample_memory = (frame_number is None) or (frame_number % 30 == 0)
+            
+            if should_sample_memory:
+                try:
+                    memory_mb = self.process.memory_info().rss / (1024 * 1024)
+                    self.memory_history.append(memory_mb)
+                except:
+                    pass
     
     def get_stats(self):
         """สถิติประสิทธิภาพ"""
@@ -341,7 +347,6 @@ def get_logger():
 
 def log_detection(frame_number, bbox, confidence, detection_type, outlier_reasons=None):
     """Convenience function"""
-    from src.config import config
     if not config.LOGGING_ENABLED:
         return
     if _global_session_logger:
@@ -352,26 +357,23 @@ def log_detection(frame_number, bbox, confidence, detection_type, outlier_reason
 
 def log_event(event_type, severity, message, data=None):
     """Convenience function"""
-    from src.config import config
     if not config.LOGGING_ENABLED:
         return
     if _global_session_logger:
         _global_session_logger.event_logger.log_event(event_type, severity, message, data)
 
 
-def log_frame(fps, latency_ms):
+def log_frame(fps, latency_ms, frame_number=None):
     """Convenience function"""
-    from src.config import config
     if not config.LOGGING_ENABLED:
         return
     if _global_session_logger:
-        _global_session_logger.performance_logger.log_frame(fps, latency_ms)
+        _global_session_logger.performance_logger.log_frame(fps, latency_ms, frame_number)
 
 
 def log_environment(frame_number, brightness, contrast, fg_pixels_ratio=None, 
                     target_count=0, mog2_learning_complete=False):
     """Convenience function"""
-    from src.config import config
     if not config.LOGGING_ENABLED:
         return
     if _global_session_logger:

@@ -897,11 +897,12 @@ def vision_loop():
                 
                 if is_valid:
                     filtered_contours.append(cnt)
-                elif cfg.get('outlier_logging', True):
+                elif cfg.get('outlier_logging', True) and (_frame_number % 10 == 0):
+                    # Sample every 10 frames to avoid logger overflow
                     x, y, w, h = cv2.boundingRect(cnt)
                     print(f"[OUTLIER] {reason}: bbox=({x},{y},{w},{h})")
                     
-                    # ✨ LOG: บันทึก rejected detection
+                    # ✨ LOG: บันทึก rejected detection (sampled)
                     logger.log_detection(
                         frame_number=_frame_number,
                         bbox=(x, y, w, h),
@@ -1089,14 +1090,15 @@ def vision_loop():
             if dt > 0: fps_history.append(1.0/dt)
             fps = int(sum(fps_history)/len(fps_history)) if fps_history else 0
 
-            # ✨ LOG: บันทึก FPS และ latency ทุกเฟรม (sample ทุก 5 เฟรม เพื่อลด I/O)
+            # ✨ LOG: บันทึก FPS และ latency (sample ทุก 5 เฟรม)
             if _frame_number % 5 == 0:
                 current_fps = 1.0/dt if dt > 0 else 0
                 current_latency_ms = dt * 1000
                 
                 logger.log_frame(
                     fps=current_fps,
-                    latency_ms=current_latency_ms
+                    latency_ms=current_latency_ms,
+                    frame_number=_frame_number
                 )
                 
                 # ✨ Phase 3.1: Detect performance spikes
