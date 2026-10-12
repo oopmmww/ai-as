@@ -58,6 +58,9 @@ class Config:
         
         # ── Logging (Phase 5) ──────────────────────────────
         self.LOGGING_ENABLED = True  # Toggle เก็บ logs หรือไม่
+        
+        # Load config from file
+        self.load()
 
     # ─── Thread-safe Color Properties ────────────────────────
     # np.ndarray is mutable → must do atomic reference swap

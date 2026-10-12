@@ -18,12 +18,6 @@ def show_dashboard():
     return render_template('dashboard.html')
 
 
-@dashboard_bp.route('/')
-def index_redirect():
-    """Redirect / ไปที่ dashboard"""
-    return render_template('dashboard.html')
-
-
 def register_dashboard_route(app):
     """ลงทะเบียน dashboard routes ใน Flask app"""
     app.register_blueprint(dashboard_bp)

@@ -1,0 +1,40 @@
+# ── Secrets & Tokens ──────────────────────────────────
+.api_token
+
+# ── Config (contains personal settings) ──────────────
+# Uncomment if you don't want to share your config:
+# aimbot_config.json
+
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Virtual Environments ──────────────────────────────
+venv/
+env/
+.env/
+.venv/
+
+# ── IDE ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────
+desktop.ini

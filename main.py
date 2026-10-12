@@ -125,17 +125,21 @@ def _open_browser():
     print("[BROWSER] Opened at http://127.0.0.1:5000/")
 
 def _gc_tuning_loop():
-    """Phase 3.2: GC tuning - manually trigger collection to avoid pauses in vision loop"""
-    # Disable automatic GC to prevent pauses during vision loop
-    gc.disable()
-    print("[GC] Garbage collection disabled (manual control)")
+    """Phase 3.2: GC tuning - use generational tuning instead of disable"""
+    # Use generational GC tuning for better memory management
+    # Gen0: small threshold (more frequent), Gen1/2: normal
+    gc.set_threshold(700, 10, 10)
+    print("[GC] Generational GC tuning enabled (Gen0: 700, Gen1: 10, Gen2: 10)")
     
+    # Monitor in background
     while not _shutdown_event.is_set():
-        time.sleep(2.0)  # Trigger every 2 seconds (off-thread)
+        time.sleep(5.0)  # Check every 5 seconds
         try:
-            collected = gc.collect()
-            if collected > 100:  # Only log if significant collection happened
-                print(f"[GC] Collected {collected} objects")
+            stats = gc.get_stats()
+            if stats:
+                gen0_collected = stats[0].get('collected', 0)
+                if gen0_collected > 500:
+                    print(f"[GC] Gen0 collected {gen0_collected} objects")
         except Exception as e:
             print(f"[GC] Error: {e}")
 
@@ -150,6 +154,9 @@ if __name__ == "__main__":
 
     # Pre-flight checks
     _preflight_checks()
+
+    # Logger initialization (MUST be before Arduino/Vision)
+    initialize_logger(log_dir="logs")
 
     # Arduino
     ard.config.SERIAL_PORT = ard.find_arduino_port() or "COM3"
@@ -167,9 +174,6 @@ if __name__ == "__main__":
 
     # Kill key listener (NOT daemon, so it keeps program alive)
     threading.Thread(target=_kill_listener, daemon=False, name="KillListener").start()
-
-    # Logger initialization
-    initialize_logger(log_dir="logs")
     
     # Phase 4.3: RCS Learner initialization
     initialize_rcs_learner()

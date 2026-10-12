@@ -1022,14 +1022,13 @@ def vision_loop():
                     # Send to Arduino (primary method)
                     ard_ok = send_to_arduino(int(fx), int(fy))
                     
-                    # Fallback: if Arduino not connected, move mouse directly
-                    if not ard_ok:
-                        try:
-                            import pyautogui as pag
-                            current_x, current_y = pag.position()
-                            pag.moveTo(current_x + int(fx), current_y + int(fy), duration=0.01)
-                        except Exception as mouse_err:
-                            pass
+                    # Fallback: if Arduino not connected, try mouse (DISABLED - see comment above)
+                    # if not ard_ok:
+                    #     try:
+                    #         import pyautogui as pag
+                    #         pag.moveRel(int(fx), int(fy), duration=0.01)  # relative move
+                    #     except Exception as mouse_err:
+                    #         pass
 
                     # draw (only if monitor is on)
                     if _cur_show_monitor:

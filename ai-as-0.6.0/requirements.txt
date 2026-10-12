@@ -1,0 +1,11 @@
+opencv-python>=4.8.0
+numpy>=1.24.0
+pyserial>=3.5
+flask>=3.0.0
+keyboard>=0.13.5
+pyautogui>=0.9.54
+mss>=9.0.1
+noise>=1.2.2
+
+# Optional: faster screen capture (Windows only)
+# dxcam>=0.0.5
