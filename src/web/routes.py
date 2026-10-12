@@ -84,7 +84,7 @@ def status():
         "arduino": "ok" if ard.arduino and ard.arduino.is_open else "err",
         "fps": snap["fps"],
         "targets": snap["target_count"],
-        "aim_zone": vision.AIM_ZONE,
+        "aim_zone": vision.get_aim_zone(),
         "show_monitor": snap["show_monitor"],
         "show_win": snap["show_monitor"],
         "show_fov": snap["show_fov"],
@@ -142,8 +142,7 @@ def toggle_fov():
 @require_auth
 def set_zone():
     z = (request.get_json(silent=True) or {}).get("zone", "head")
-    if z in vision.AIM_ZONE_MAP:
-        vision.AIM_ZONE = z
+    if vision.set_aim_zone(z):
         return jsonify({"ok": True, "zone": z})
     return jsonify({"ok": False, "zone": z}), 400
 
@@ -151,8 +150,7 @@ def set_zone():
 @require_auth
 def zone():
     z = (request.get_json(silent=True) or {}).get("zone", "head")
-    if z in vision.AIM_ZONE_MAP:
-        vision.AIM_ZONE = z
+    if vision.set_aim_zone(z):
         return jsonify({"ok": True, "zone": z})
     return jsonify({"ok": False, "zone": z}), 400
 

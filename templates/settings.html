@@ -278,9 +278,30 @@
     </div>
     
     <script>
+        // Ensure API token is available
+        async function ensureToken() {
+            let apiToken = localStorage.getItem('api_token');
+            if (!apiToken) {
+                apiToken = prompt('ใส่ API Token:') || '';
+                if (apiToken) {
+                    localStorage.setItem('api_token', apiToken);
+                } else {
+                    console.warn('[WARN] No API token provided');
+                    return null;
+                }
+            }
+            return apiToken;
+        }
+        
         const API_TOKEN = localStorage.getItem('api_token') || '';
         
         async function toggleLogging() {
+            const token = await ensureToken();
+            if (!token) {
+                showStatus('❌ API token required', 'error');
+                return;
+            }
+            
             const toggle = document.getElementById('loggingToggle');
             const newState = !toggle.classList.contains('active');
             
@@ -289,7 +310,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-API-Token': API_TOKEN
+                        'X-API-Token': token
                     },
                     body: JSON.stringify({
                         enabled: newState
@@ -318,9 +339,15 @@
         
         async function loadConfig() {
             try {
+                const token = await ensureToken();
+                if (!token) {
+                    console.warn('[WARN] Cannot load config without token');
+                    return;
+                }
+                
                 const response = await fetch('/api/config', {
                     headers: {
-                        'X-API-Token': API_TOKEN
+                        'X-API-Token': token
                     }
                 });
                 
@@ -338,6 +365,8 @@
                     // Display config
                     const configDisplay = document.getElementById('configDisplay');
                     configDisplay.textContent = JSON.stringify(config, null, 2);
+                } else {
+                    console.error('Failed to load config:', response.status);
                 }
             } catch (error) {
                 console.error('Failed to load config:', error);

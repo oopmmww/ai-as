@@ -63,7 +63,7 @@ _active          = False
 fps_history     = deque(maxlen=60)
 last_frame_time = 0.0
 target_count    = 0
-AIM_ZONE        = "head"
+_AIM_ZONE        = "head"  # ← Protected by _vision_lock
 AIM_ZONE_MAP    = {"head": 0.18, "neck": 0.28, "body": 0.50}
 _frame_number   = 0  # ← เพิ่มสำหรับ logging
 
@@ -116,6 +116,29 @@ def toggle_show_fov() -> bool:
     with _vision_lock:
         _show_fov = not _show_fov
         return _show_fov
+
+def get_aim_zone():
+    """Get current aim zone thread-safely."""
+    with _vision_lock:
+        return _AIM_ZONE
+
+def set_aim_zone(zone: str):
+    """Set aim zone thread-safely."""
+    global _AIM_ZONE
+    if zone not in AIM_ZONE_MAP:
+        return False
+    with _vision_lock:
+        _AIM_ZONE = zone
+    return True
+
+# Backward-compat property for routes.py direct access
+class _AimZoneProxy:
+    """Allows `vision.AIM_ZONE = X` to go through thread-safe setter."""
+    def __get__(self, obj, objtype=None):
+        return get_aim_zone()
+    
+    def __set__(self, obj, value):
+        set_aim_zone(value)
 
 # --- backward-compat properties (for routes.py direct attribute access) ---
 # These are module-level shims so that `vision.active` still works externally
@@ -792,6 +815,7 @@ def is_activation_key_pressed() -> bool:
 
 _last_trig_ms = 0.0
 _fire_start_time = 0.0
+_rcs_recording = []  # ← เก็บ recoil offsets ในระหว่าง fire
 
 # RCS pattern: ใช้ default เพราะยังไม่ learn weapon ใดๆ เฉพาะหรือจะได้รับจาก rcs_learner
 _RCS_DEFAULT_PATTERN = [
@@ -983,7 +1007,7 @@ def vision_loop():
 
                 if best_bbox:
                     bx,by,bw,bh = best_bbox
-                    pct   = AIM_ZONE_MAP.get(AIM_ZONE, 0.18)
+                    pct   = AIM_ZONE_MAP.get(get_aim_zone(), 0.18)
                     raw_x = bx + bw//2  + cfg['offset_x']
                     raw_y = int(by+bh*pct) + cfg['offset_y']
 
@@ -1036,6 +1060,7 @@ def vision_loop():
                         if frame_count < len(rcs_pattern):
                             rcs_offset = rcs_pattern[frame_count] * cfg['rcs_strength']
                             my += rcs_offset
+                            _rcs_recording.append(rcs_offset)  # ← Record recoil for learning
 
                     fx, fy = humanize_movement(mx, my, confidence=best_confidence)
                     
@@ -1147,17 +1172,44 @@ def vision_loop():
                             'target_count': target_count
                         }
                     )
+            
+            # ── RCS Recording (BUG-12 fix) ──────────────────────────────
+            # เมื่อ trigger ถูก release ให้ record pattern ที่เรียนรู้ได้
+            if _fire_start_time > 0 and not _trig_held():
+                if _rcs_recording:
+                    from src.config.rcs_learner import get_rcs_learner, initialize_rcs_learner
+                    rcs_learner_inst = get_rcs_learner()
+                    if rcs_learner_inst is None:
+                        rcs_learner_inst = initialize_rcs_learner()
+                    
+                    if rcs_learner_inst:
+                        rcs_learner_inst.record_recoil('default', _rcs_recording)
+                        logger.log_event(
+                            event_type='rcs_pattern_recorded',
+                            severity='info',
+                            message=f'Recorded RCS pattern ({len(_rcs_recording)} frames)',
+                            data={'frame_count': len(_rcs_recording)}
+                        )
+                
+                # Reset recording
+                _fire_start_time = 0
+                _rcs_recording = []
 
             # ── HUD ──────────────────────────────────────
             if _cur_show_monitor:
-                st = ("LOCK" if _lock_bbox else "SCAN" if aim_on
+                # Snapshot _lock_bbox for thread-safe HUD display (BUG-11 fix)
+                with _vision_lock:
+                    hud_has_lock = _lock_bbox is not None
+                    hud_aim_zone = _AIM_ZONE
+                
+                st = ("LOCK" if hud_has_lock else "SCAN" if aim_on
                       else "RDY" if _cur_active else "OFF")
-                sc = ((0,255,255) if _lock_bbox else (0,165,255) if aim_on
+                sc = ((0,255,255) if hud_has_lock else (0,165,255) if aim_on
                       else (0,165,255) if _cur_active else (80,80,80))
 
                 cv2.putText(vis, f"FPS:{fps} {cap_tag}  T:{target_count}  {st}",
                             (12,35), cv2.FONT_HERSHEY_SIMPLEX, 0.75, sc, 2)
-                cv2.putText(vis, f"ZONE:{AIM_ZONE.upper()}",
+                cv2.putText(vis, f"ZONE:{hud_aim_zone.upper()}",
                             (12,65), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (200,200,255), 2)
                 cv2.putText(vis,
                             f"AIM[{cfg['activation_key'].upper()}]  "
