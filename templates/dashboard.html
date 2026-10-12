@@ -288,7 +288,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>📊 AIAS Detection Dashboard</h1>
+            <h1>ðŸ“Š AIAS Detection Dashboard</h1>
             <div class="session-info">
                 <span id="session-id">Session: Loading...</span>
                 <span id="session-duration" style="margin-left: 20px;">Duration: --:--:--</span>
@@ -300,7 +300,7 @@
         <div class="grid">
             <!-- Detection Stats -->
             <div class="card">
-                <h2>🎯 Detection Stats</h2>
+                <h2>ðŸŽ¯ Detection Stats</h2>
                 <div class="stat">
                     <span class="stat-label">Total Detections</span>
                     <span class="stat-value" id="total-detections">0</span>
@@ -325,7 +325,7 @@
 
             <!-- Performance Stats -->
             <div class="card">
-                <h2>⚡ Performance</h2>
+                <h2>âš¡ Performance</h2>
                 <div class="stat">
                     <span class="stat-label">Current FPS</span>
                     <span class="stat-value" id="current-fps">0</span>
@@ -350,7 +350,7 @@
 
             <!-- Memory & Health -->
             <div class="card">
-                <h2>💾 System Health</h2>
+                <h2>ðŸ’¾ System Health</h2>
                 <div class="stat">
                     <span class="stat-label">Current Memory</span>
                     <span class="stat-value" id="current-memory">0 MB</span>
@@ -375,7 +375,7 @@
 
             <!-- Trigger Stats -->
             <div class="card">
-                <h2>🎯 Trigger & Arduino</h2>
+                <h2>ðŸŽ¯ Trigger & Arduino</h2>
                 <div class="stat">
                     <span class="stat-label">Trigger Fires</span>
                     <span class="stat-value success" id="trigger-fires">0</span>
@@ -398,29 +398,29 @@
         <!-- Charts -->
         <div class="charts-row">
             <div class="chart-container">
-                <h2>📈 FPS History</h2>
+                <h2>ðŸ“ˆ FPS History</h2>
                 <canvas id="fps-chart"></canvas>
             </div>
             <div class="chart-container">
-                <h2>⏱️ Latency History</h2>
+                <h2>â±ï¸ Latency History</h2>
                 <canvas id="latency-chart"></canvas>
             </div>
         </div>
 
         <div class="charts-row">
             <div class="chart-container">
-                <h2>💾 Memory Usage</h2>
+                <h2>ðŸ’¾ Memory Usage</h2>
                 <canvas id="memory-chart"></canvas>
             </div>
             <div class="chart-container">
-                <h2>🎯 Detection Breakdown</h2>
+                <h2>ðŸŽ¯ Detection Breakdown</h2>
                 <canvas id="detection-pie"></canvas>
             </div>
         </div>
 
         <!-- Rejection Breakdown -->
         <div class="card">
-            <h2>❌ Top Rejection Reasons</h2>
+            <h2>âŒ Top Rejection Reasons</h2>
             <div id="rejection-breakdown" class="rejection-breakdown">
                 <div class="loading"><div class="spinner"></div></div>
             </div>
@@ -428,7 +428,7 @@
 
         <!-- Recent Events -->
         <div class="card" style="margin-bottom: 20px;">
-            <h2>📋 Recent Events</h2>
+            <h2>ðŸ“‹ Recent Events</h2>
             <div id="event-log-container" style="max-height: 300px; overflow-y: auto;">
                 <div class="loading"><div class="spinner"></div></div>
             </div>
@@ -436,10 +436,10 @@
 
         <!-- Actions -->
         <div class="button-group">
-            <button onclick="saveData()">💾 Save Session</button>
-            <button onclick="exportCSV()">📊 Export CSV</button>
-            <button onclick="refreshData()">🔄 Refresh Now</button>
-            <button onclick="clearAllData()" style="background: #f44336;">🗑️ Clear Data</button>
+            <button onclick="saveData()">ðŸ’¾ Save Session</button>
+            <button onclick="exportCSV()">ðŸ“Š Export CSV</button>
+            <button onclick="refreshData()">ðŸ”„ Refresh Now</button>
+            <button onclick="clearAllData()" style="background: #f44336;">ðŸ—‘ï¸ Clear Data</button>
         </div>
 
         <div class="last-updated">
@@ -643,9 +643,9 @@
             try {
                 const res = await fetch('/api/logger/save', { method: 'POST' });
                 const data = await res.json();
-                alert('✅ ' + data.message);
+                alert('âœ… ' + data.message);
             } catch (error) {
-                alert('❌ Error saving data');
+                alert('âŒ Error saving data');
             }
         }
 
@@ -653,9 +653,9 @@
             try {
                 const res = await fetch('/api/logger/export-csv', { method: 'POST' });
                 const data = await res.json();
-                alert('✅ ' + data.message);
+                alert('âœ… ' + data.message);
             } catch (error) {
-                alert('❌ Error exporting CSV');
+                alert('âŒ Error exporting CSV');
             }
         }
 
@@ -689,7 +689,7 @@
         }
 
         function clearAllData() {
-            if (confirm('⚠️ Are you sure? This will clear all data!')) {
+            if (confirm('âš ï¸ Are you sure? This will clear all data!')) {
                 fetch('/api/logger/stats'); // Just refresh
                 alert('Data refresh requested');
             }
@@ -706,25 +706,3 @@
     </script>
 </body>
 </html>
-
-
-        // Update trigger stats
-        function updateTriggerStats(stats) {
-            document.getElementById('trigger-fires').textContent = stats.trigger_fires || 0;
-            document.getElementById('target-lost').textContent = stats.target_lost_count || 0;
-            document.getElementById('arduino-errors').textContent = stats.arduino_errors || 0;
-        }
-
-        // Update health check
-        function updateHealthCheck(health) {
-            if (!health.status) return;
-            
-            const badge = document.getElementById('system-status-badge');
-            if (health.status === 'good') {
-                badge.className = 'status-badge good';
-                badge.textContent = '✅ GOOD';
-            } else {
-                badge.className = 'status-badge warning';
-                badge.textContent = '⚠️ WARNING';
-            }
-        }

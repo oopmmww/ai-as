@@ -17,6 +17,7 @@ import threading
 import traceback
 from collections import deque
 from src.config import config
+from src.config.rcs_learner import get_rcs_pattern as get_learned_rcs_pattern
 from src.core.arduino import send_to_arduino
 from src.core.humanize import humanize_movement
 from src.logging import data_logger as logger
@@ -481,9 +482,17 @@ def adapt_color_range(hsv_frame, base_lower, base_upper, brightness):
     else:  # Normal lighting
         lower, upper = base_lower, base_upper
     
-    # Clamp values
-    lower = np.clip(lower, 0, 180)
-    upper = np.clip(upper, 0, 180)
+    # Clamp values - H is 0-180, S and V are 0-255
+    lower = np.array([
+        np.clip(lower[0], 0, 180),   # H: 0-180
+        np.clip(lower[1], 0, 255),   # S: 0-255
+        np.clip(lower[2], 0, 255)    # V: 0-255
+    ])
+    upper = np.array([
+        np.clip(upper[0], 0, 180),   # H: 0-180
+        np.clip(upper[1], 0, 255),   # S: 0-255
+        np.clip(upper[2], 0, 255)    # V: 0-255
+    ])
     
     return lower, upper
 def detect_color(hsv: np.ndarray, lower: np.ndarray = None, upper: np.ndarray = None) -> np.ndarray:
@@ -784,11 +793,19 @@ def is_activation_key_pressed() -> bool:
 _last_trig_ms = 0.0
 _fire_start_time = 0.0
 
-RCS_PATTERN = [
+# RCS pattern: ใช้ default เพราะยังไม่ learn weapon ใดๆ เฉพาะหรือจะได้รับจาก rcs_learner
+_RCS_DEFAULT_PATTERN = [
     0.5, 1.2, 1.8, 2.1, 1.9, 1.6, 1.3, 1.0,
     0.8, 0.6, 0.4, 0.2,
     0.1, 0.0,
 ]
+
+def _get_rcs_pattern():
+    """Get current RCS pattern from learner, or use default."""
+    learned = get_learned_rcs_pattern('default')
+    if learned:
+        return learned
+    return _RCS_DEFAULT_PATTERN
 
 def _trig_held() -> bool:
     t = _TRIG_KEY_MAP.get(config.TRIGGER_KEY)
@@ -1013,10 +1030,12 @@ def vision_loop():
                     my = ((pred_y - fov_center[1]) / ds) * cfg['y_speed']
 
                     # ── RCS ───────────────────────────────
-                    if cfg['rcs_enable'] and _trig_held():
+                    if cfg['rcs_enable'] and _fire_start_time > 0:
+                        rcs_pattern = _get_rcs_pattern()
                         frame_count = int((time.perf_counter() - _fire_start_time) * 144)
-                        if frame_count < len(RCS_PATTERN):
-                            my += RCS_PATTERN[frame_count]
+                        if frame_count < len(rcs_pattern):
+                            rcs_offset = rcs_pattern[frame_count] * cfg['rcs_strength']
+                            my += rcs_offset
 
                     fx, fy = humanize_movement(mx, my, confidence=best_confidence)
                     

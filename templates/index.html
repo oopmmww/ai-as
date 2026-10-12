@@ -615,6 +615,7 @@ function doSaveProfile(){
 }
 
 let _firstPoll = true
+let _configLoadCycle = 0
 function poll(){
   api('/status', 'GET').then(d=>{
     document.getElementById('dArduino').className = 'dot ' + (d.arduino==='ok'?'ok':'err')
@@ -649,6 +650,7 @@ function poll(){
       if(d.com !== undefined) {const el = document.getElementById('inCom'); if(el) el.value = d.com}
       setSw('swRcs', d.rcs_enable)
       if(d.rcs_strength !== undefined) setSlider('rRcsStr', 'vRcsStr', d.rcs_strength, 1)
+      loadConfig()  // โหลด config ครั้งแรกหลัง status load สำเร็จ
     }
     if(d.profiles && d.profile){
       const sel = document.getElementById('selProfile')
@@ -660,6 +662,11 @@ function poll(){
         }
         sel.value = d.profile
       }
+    }
+    // โหลด config ทุก 10 วินาที (ทุก 10 poll)
+    _configLoadCycle++
+    if(_configLoadCycle % 10 === 0){
+      loadConfig()
     }
   }).catch(()=>{
     ['sFps','sTargets','sLock'].forEach(id=>{document.getElementById(id).textContent = '—'})
@@ -725,12 +732,7 @@ async function loadConfig(){
   }
 }
 
-// Load config when poll() is called
-const originalPoll = poll
-function poll(){
-  originalPoll()
-  loadConfig()
-}
+
 </script>
 </body>
 </html>
