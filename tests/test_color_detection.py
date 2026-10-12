@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 """Debug color detection"""
 
+import sys
 import cv2
 import numpy as np
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 print("=" * 60)
 print("[DEBUG] Color Detection Test")

@@ -61,32 +61,27 @@ aias/
 │   ├── index.html               ← Main control panel
 │   ├── dashboard.html           ← Analytics dashboard
 │   └── settings.html            ← Settings page (standalone)
-├── docs/                        ← Documentation (Phase 8 - NEW)
-│   ├── CHANGELOG.md             ← Development history (Phase 1-8)
-│   ├── DASHBOARD_SETUP.md       ← Dashboard guide
-│   ├── DEVELOPMENT_ROADMAP.md   ← Future plans
-│   ├── INTEGRATION_SUMMARY.md   ← System architecture
-│   ├── LOGGER_INTEGRATION.md    ← Logging details
-│   └── PLAN_A_DETAILED.md       ← Detailed plans
-├── config/                      ← Configuration files (Phase 8 - NEW)
-│   └── aimbot_config.json       ← Saved settings (auto-created)
-├── firmware/
+├── docs/                        ← Documentation & guides
+│   ├── CHANGELOG.md             ← Development history
+│   ├── QUICK_START.md           ← Quick start guide
+│   ├── README_TH.md             ← Thai documentation
+│   └── reports/                 ← Historical analysis & reports
+├── scripts/                     ← Diagnostics & utilities
+│   ├── diagnose.py              ← Hardware & environment diagnostic tool
+│   └── quick_check.py           ← Quick smoke test script
+├── tests/                       ← Unit & integration tests
+│   ├── test_imports.py          ← Module import verification
+│   ├── test_detection.py        ← Detection logic test
+│   └── test_color_detection.py  ← Color conversion test
+├── firmware/                    ← Arduino Pro Micro HID firmware
 │   └── firmware.ino             ← Arduino sketch
 ├── logs/                        ← Session logs (auto-created)
-│   ├── session_*.json           ← Session data
-│   ├── detections_*.csv         ← Detection logs
-│   └── performance_*.csv        ← Performance metrics
-├── .github/
-│   ├── workflows/lint.yml       ← GitHub Actions
-│   └── ISSUE_TEMPLATE/          ← Issue templates
-├── .kiro/
-│   └── specs/phase-a1-integration/
-│       ├── requirements.md      ← Integration requirements
-│       ├── design.md            ← Technical design
-│       └── tasks.md             ← Task checklist
+├── .github/                     ← GitHub Actions & issue templates
+├── aimbot_config.example.json   ← Template config for new setups
+├── aimbot_config.json           ← Active configuration (auto-created)
 ├── CONTRIBUTING.md              ← Contributor guide
 ├── LICENSE                      ← MIT License
-└── README.md                    ← This file
+└── README.md                    ← Main repository README
 ```
 
 **Key Changes (Phase 8):**

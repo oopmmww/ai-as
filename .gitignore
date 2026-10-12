@@ -17,11 +17,14 @@ build/
 *.egg
 .eggs/
 
-# ── Virtual Environments ──────────────────────────────
+# ── Virtual Environments & Testing ────────────────────
 venv/
 env/
 .env/
 .venv/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # ── IDE ───────────────────────────────────────────────
 .vscode/

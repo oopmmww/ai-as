@@ -86,6 +86,16 @@ class Config:
         with self._lock:
             self._upper_color = arr
 
+    @property
+    def COM_PORT(self):
+        with self._lock:
+            return self.SERIAL_PORT
+
+    @COM_PORT.setter
+    def COM_PORT(self, value):
+        with self._lock:
+            self.SERIAL_PORT = value
+
     # ─── Atomic Snapshot for Vision Loop ─────────────────────
     def get_detection_params(self):
         """Return atomic snapshot of detection-related config.
@@ -154,9 +164,9 @@ class Config:
                         setattr(self, k, np.array(v))
                     elif hasattr(self, k):
                         setattr(self, k, v)
-                print(f"✅ Config [{profile}]")
+                print(f"[CONFIG] Loaded [{profile}]")
             except Exception as e:
-                print(f"⚠️ Load failed: {e}")
+                print(f"[CONFIG] Load failed: {e}")
 
     def list_profiles(self) -> list:
         with self._lock:

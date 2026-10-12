@@ -8,10 +8,10 @@ from src.config import config
 try:
     from noise import snoise2
     USE_OPENSIMPLEX = True
-    print("✅ OpenSimplex noise available")
+    print("[HUMANIZE] OpenSimplex noise available")
 except ImportError:
     USE_OPENSIMPLEX = False
-    print("⚠️ Using Perlin fallback (pip install noise for better quality)")
+    print("[HUMANIZE] Using Perlin fallback (pip install noise for better quality)")
     
     # Fallback: basic Perlin
     _perm = list(range(256))

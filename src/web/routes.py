@@ -107,7 +107,7 @@ def status():
         "trigger_delay": config.TRIGGER_DELAY,
         "activation_key": config.ACTIVATION_KEY,
         "trigger_key": config.TRIGGER_KEY,
-        "com": config.COM_PORT,
+        "com": config.SERIAL_PORT,
         "rcs_enable": config.RCS_ENABLE,
         "rcs_strength": config.RCS_STRENGTH,
         "humanize": config.HUMANIZE,

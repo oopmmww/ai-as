@@ -870,7 +870,7 @@ def pick_color(event, x, y, flags, param):
 def vision_loop():
     global _active, target_count, last_frame_time, fps_history
     global _lock_bbox, _lock_lost, _lock_vx, _lock_vy, _consecutive_errors, _lock_prev_area
-    global _frame_number
+    global _frame_number, _fire_start_time, _rcs_recording
 
     cap_tag = "[DX]" if _USE_DXCAM else "[MS]"
     print("[VISION] Started [{}]".format(cap_tag))
